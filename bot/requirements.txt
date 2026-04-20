@@ -2,3 +2,4 @@ pyTelegramBotAPI
 deep-translator
 flask
 requests
+gunicorn
