@@ -81,7 +81,7 @@ def translate_callback(call):
         )
 
 # 6. ASOSIY QISM
-if name == "main":
+if __name__ == "__main__":
     Thread(target=run_web_server, daemon=True).start()
     while True:
         try:
