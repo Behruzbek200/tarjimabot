@@ -1,13 +1,10 @@
-import os, telebot
+import telebot
 from deep_translator import GoogleTranslator
-from flask import Flask, request
 
-TOKEN = os.environ.get('BOT_TOKEN')
-RENDER_URL = os.environ.get('RENDER_URL')
-bot = telebot.TeleBot(TOKEN)
-app = Flask(__name__)
+# 1. TOKENNI TEKSHIRING
+TOKEN = '8165546119:AAEifJ5hSmGN3aIEoJM9Bd1IlVNeujKDxKo'
+bot = telebot.TeleBot(TOKEN, threaded=False)
 
-# Foydalanuvchi matnini eslab qolish uchun lug'at
 user_data = {}
 
 LANGS = {
@@ -17,45 +14,53 @@ LANGS = {
 }
 
 def lang_inline():
-    m = telebot.types.InlineKeyboardMarkup(row_width=2)
+    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     btns = [telebot.types.InlineKeyboardButton(text=v.capitalize(), callback_data=f"tr_{k}") for k, v in LANGS.items()]
-    m.add(*btns)
-    return m
+    markup.add(*btns)
+    return markup
 
 @bot.message_handler(commands=['start'])
-def start(m):
-    bot.send_message(m.chat.id, "👋 Salom! Tarjima qilinadigan so'zni yuboring:")
+def start(message):
+    bot.send_message(message.chat.id, "👋 Salom! Istalgan tilda matn yuboring:")
 
-@bot.message_handler(func=lambda m: True)
-def handle_text(m):
-    user_data[m.chat.id] = m.text # Matnni saqlaymiz
-    bot.reply_to(m, "👇 Qaysi tilga tarjima qilamiz?", reply_markup=lang_inline())
+@bot.message_handler(func=lambda message: True)
+def handle_text(message):
+    user_data[message.chat.id] = message.text
+    bot.send_message(message.chat.id, "👇 Qaysi tilga tarjima qilamiz?", reply_markup=lang_inline())
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('tr_'))
-def translate_call(call):
+def translate_callback(call):
     lang_code = call.data.split('_')[1]
-    text = user_data.get(call.message.chat.id) # Saqlangan matnni olamiz
-    
-    if text:
+    chat_id = call.message.chat.id
+    original_text = user_data.get(chat_id)
+
+    if original_text:
         try:
-            bot.edit_message_text("⏳ Tarjima qilinmoqda...", call.message.chat.id, call.message.message_id)
-            tr = GoogleTranslator(source='auto', target=LANGS[lang_code]).translate(text)
-            bot.edit_message_text(f"✅ **{LANGS[lang_code].capitalize()} tilida:**\n\n{tr}", call.message.chat.id, call.message.message_id)
-        except:
-            bot.edit_message_text("❌ Xatolik: Tarjima xizmati javob bermadi.", call.message.chat.id, call.message.message_id)
+            bot.answer_callback_query(call.id, "⏳ Tarjima qilinmoqda...")
+            target_lang = LANGS[lang_code]
+
+            # 1-QADAM: Avval o'zbekcha deb o'ylab tarjima qilamiz
+            translated = GoogleTranslator(source='uz', target=target_lang).translate(original_text)
+
+            # 2-QADAM: Agar tarjima matni bilan bir xil bo'lib qolsa, demak bu o'zbekcha emas
+            # U holda 'auto' rejimida qayta tarjima qilamiz
+            if translated.lower() == original_text.lower():
+                translated = GoogleTranslator(source='auto', target=target_lang).translate(original_text)
+
+            result_text = f"✅ {target_lang.capitalize()} tilida:\n\n{translated}"
+            
+            bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=call.message.message_id,
+                text=result_text,
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            bot.edit_message_text(f"❌ Tarjima xatosi: {str(e)[:30]}", chat_id, call.message.message_id)
     else:
-        bot.edit_message_text("❌ Xatolik: Matn topilmadi, qaytadan yuboring.", call.message.chat.id, call.message.message_id)
+        bot.edit_message_text("❌ Matn topilmadi.", chat_id, call.message.message_id)
 
-@app.route('/' + TOKEN, methods=['POST'])
-def getMessage():
-    bot.process_new_updates([telebot.types.Update.de_json(request.get_data().decode('utf-8'))])
-    return "!", 200
-
-@app.route("/")
-def webhook():
+if name == "main":
+    print("Bot 100% universal rejimda ishga tushdi...")
     bot.remove_webhook()
-    bot.set_webhook(url=f"{RENDER_URL}/{TOKEN}", drop_pending_updates=True)
-    return "Bot Online", 200
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    bot.polling(none_stop=True)
