@@ -1,7 +1,4 @@
-Tarjimon, [4/20/2026 4:50 AM]
-👇 Qaysi tilga tarjima qilamiz?
-
-$$$, [4/20/2026 4:55 AM]
+# -*- coding: utf-8 -*-
 import os
 import time
 import telebot
