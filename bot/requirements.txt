@@ -1,5 +1,5 @@
 pyTelegramBotAPI
-googletrans==4.0.0-rc1
+deep-translator
 flask
 SpeechRecognition
 pydub
@@ -8,3 +8,4 @@ Pillow
 PyPDF2
 python-docx
 gTTS
+requests
