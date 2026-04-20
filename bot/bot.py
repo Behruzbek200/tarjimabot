@@ -85,7 +85,7 @@ def translate_callback(call):
         bot.edit_message_text("❌ Matn topilmadi. Qaytadan yuboring.", chat_id, call.message.message_id)
 
 # 6. ASOSIY ISHGA TUSHIRISH QISMI
-if name == "main":
+if __name__ == "__main__":
     # Web-serverni alohida oqimda (Thread) boshlash
     server_thread = Thread(target=run_web_server)
     server_thread.start()
