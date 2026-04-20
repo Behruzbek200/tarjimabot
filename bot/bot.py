@@ -1,8 +1,10 @@
+import os
 import telebot
 from deep_translator import GoogleTranslator
 
-# 1. TOKENNI TEKSHIRING
-TOKEN = '8165546119:AAEifJ5hSmGN3aIEoJM9Bd1IlVNeujKDxKo'
+# 1. TOKEN va boshqa sozlamalarni ENV orqali olamiz
+# Render Dashboard'da BOT_TOKEN kalitini qo'shishni unutmang
+TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(TOKEN, threaded=False)
 
 user_data = {}
@@ -39,11 +41,9 @@ def translate_callback(call):
             bot.answer_callback_query(call.id, "⏳ Tarjima qilinmoqda...")
             target_lang = LANGS[lang_code]
 
-            # 1-QADAM: Avval o'zbekcha deb o'ylab tarjima qilamiz
+            # Mantiq: Avval o'zbekcha deb tekshiradi, o'xshamasa 'auto' rejimiga o'tadi
             translated = GoogleTranslator(source='uz', target=target_lang).translate(original_text)
 
-            # 2-QADAM: Agar tarjima matni bilan bir xil bo'lib qolsa, demak bu o'zbekcha emas
-            # U holda 'auto' rejimida qayta tarjima qilamiz
             if translated.lower() == original_text.lower():
                 translated = GoogleTranslator(source='auto', target=target_lang).translate(original_text)
 
@@ -58,9 +58,9 @@ def translate_callback(call):
         except Exception as e:
             bot.edit_message_text(f"❌ Tarjima xatosi: {str(e)[:30]}", chat_id, call.message.message_id)
     else:
-        bot.edit_message_text("❌ Matn topilmadi.", chat_id, call.message.message_id)
+        bot.edit_message_text("❌ Matn topilmadi. Qaytadan yuboring.", chat_id, call.message.message_id)
 
 if name == "main":
-    print("Bot 100% universal rejimda ishga tushdi...")
+    print("Bot Environment Variables orqali ishga tushdi...")
     bot.remove_webhook()
     bot.polling(none_stop=True)
