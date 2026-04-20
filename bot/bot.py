@@ -103,7 +103,7 @@ def translate_callback(call):
         except: pass
 
 # 5. ABADIY ISHLASH (POLLING RECOVERY)
-if name == "main":
+if __name__ == "__main__":
     server_thread = Thread(target=run_web_server)
     server_thread.daemon = True
     server_thread.start()
