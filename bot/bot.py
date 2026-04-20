@@ -9,18 +9,13 @@ RENDER_URL = os.environ.get('RENDER_URL')
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# 10 ta asosiy tarjima tili
+# Foydalanuvchi matnlarini vaqtincha saqlash uchun
+user_data = {}
+
 LANGS = {
-    'uz': 'uzbek', 
-    'en': 'english', 
-    'ru': 'russian', 
-    'tr': 'turkish', 
-    'ar': 'arabic', 
-    'de': 'german', 
-    'fr': 'french',
-    'ko': 'korean',
-    'ja': 'japanese',
-    'es': 'spanish'
+    'uz': 'uzbek', 'en': 'english', 'ru': 'russian', 'tr': 'turkish', 
+    'ar': 'arabic', 'de': 'german', 'fr': 'french', 'ko': 'korean', 
+    'ja': 'japanese', 'es': 'spanish'
 }
 
 def lang_inline():
@@ -31,30 +26,42 @@ def lang_inline():
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(message.chat.id, "👋 Salom! Tarjima qilinadigan so'z yoki matnni kiriting:")
+    bot.send_message(message.chat.id, "👋 Salom! Tarjima qilinadigan matnni yuboring:")
 
 @bot.message_handler(func=lambda message: True)
 def handle_text(message):
-    # Matn kelishi bilan darhol 10 ta tilni inline tugmada chiqaradi
+    # Foydalanuvchi matnini xotiraga saqlaymiz
+    user_data[message.chat.id] = message.text
     bot.reply_to(message, "👇 Qaysi tilga tarjima qilamiz?", reply_markup=lang_inline())
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('tr_'))
 def translate_callback(call):
     lang_code = call.data.split('_')[1]
+    chat_id = call.message.chat.id
     
-    # Foydalanuvchi yuborgan asl matnni reply qilingan xabardan olamiz
-    try:
-        original_text = call.message.reply_to_message.text
-        translated = GoogleTranslator(source='auto', target=LANGS[lang_code]).translate(original_text)
-        
-        bot.edit_message_text(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,
-            text=f"✅ **{LANGS[lang_code].capitalize()} tilida:**\n\n{translated}",
-            parse_mode="Markdown"
-        )
-    except Exception:
-        bot.answer_callback_query(call.id, "❌ Xatolik! Matn topilmadi yoki tarjima qilib bo'lmadi.")
+    # Xotiradan matnni qidiramiz
+    text_to_translate = user_data.get(chat_id)
+
+    if not text_to_translate:
+        # Agar xotirada bo'lmasa, reply qilingan xabardan qidiradi
+        if call.message.reply_to_message and call.message.reply_to_message.text:
+            text_to_translate = call.message.reply_to_message.text
+    
+    if text_to_translate:
+        try:
+            bot.edit_message_text("⏳ Tarjima qilinmoqda...", chat_id, call.message.message_id)
+            translated = GoogleTranslator(source='auto', target=LANGS[lang_code]).translate(text_to_translate)
+            
+            bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=call.message.message_id,
+                text=f"✅ **{LANGS[lang_code].capitalize()}:**\n\n{translated}",
+                parse_mode="Markdown"
+            )
+        except Exception:
+            bot.edit_message_text("❌ Tarjima qilishda xatolik yuz berdi. Matn juda uzun bo'lishi mumkin.", chat_id, call.message.message_id)
+    else:
+        bot.edit_message_text("❌ Kechirasiz, tarjima qilinadigan matn topilmadi. Qaytadan yuboring.", chat_id, call.message.message_id)
 
 @app.route('/' + TOKEN, methods=['POST'])
 def getMessage():
@@ -65,8 +72,7 @@ def getMessage():
 def webhook():
     bot.remove_webhook()
     bot.set_webhook(url=f"{RENDER_URL}/{TOKEN}", drop_pending_updates=True)
-    return "Tarjimon Bot Online!", 200
+    return "Bot ishlamoqda...", 200
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
