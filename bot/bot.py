@@ -60,7 +60,7 @@ def translate_callback(call):
     else:
         bot.edit_message_text("❌ Matn topilmadi. Qaytadan yuboring.", chat_id, call.message.message_id)
 
-if name == "main":
+if __name__ == "__main__":
     print("Bot Environment Variables orqali ishga tushdi...")
     bot.remove_webhook()
     bot.polling(none_stop=True)
